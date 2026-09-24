@@ -24,7 +24,7 @@ export type KapalDocument = ExistingKapalDocument | NewKapalDocument;
 
 export type ArmadaKapalSubmission = {
   namaDistributor: string;
-  memilikiArmadaKapal: true;
+  memilikiArmadaKapal: boolean;
   dokumenKapal: KapalDocument[];
   createdAt?: string;
   updatedAt?: string;
@@ -39,7 +39,7 @@ export type KapalDocumentField = KapalDocument | EmptyKapalDocument;
 
 export type ArmadaKapalFormValues = {
   namaDistributor: string;
-  memilikiArmadaKapal: boolean;
+  memilikiArmadaKapal: boolean | null;
   dokumenKapal: KapalDocumentField[];
 };
 

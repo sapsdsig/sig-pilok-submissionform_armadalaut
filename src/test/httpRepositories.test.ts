@@ -100,6 +100,56 @@ describe("frontend HTTP repositories", () => {
     expect(result.dokumenKapal[0]).toMatchObject({ source: "existing", fileId: "drive-new" });
   });
 
+  it("maps an existing TIDAK submission without assuming YA", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({
+      exists: true,
+      submission: {
+        namaDistributor: "ABADI PUTERA WIRAJAYA, PT",
+        memilikiArmadaKapal: false,
+        createdAt: "23-09-2026 11:15:42",
+        updatedAt: "23-09-2026 11:15:42",
+        dokumenKapal: [],
+      },
+    })));
+    await expect(
+      new HttpArmadaKapalSubmissionRepository().getByDistributor("ABADI PUTERA WIRAJAYA, PT"),
+    ).resolves.toMatchObject({ memilikiArmadaKapal: false, dokumenKapal: [] });
+  });
+
+  it("creates TIDAK directly without upload and forces an empty document payload", async () => {
+    const calls: string[] = [];
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      calls.push(url);
+      expect(JSON.parse(String(init?.body))).toEqual({
+        namaDistributor: "ABADI PUTERA WIRAJAYA, PT",
+        memilikiArmadaKapal: false,
+        dokumenKapal: [],
+      });
+      return jsonResponse({
+        submission: {
+          namaDistributor: "ABADI PUTERA WIRAJAYA, PT",
+          memilikiArmadaKapal: false,
+          createdAt: "23-09-2026 11:15:42",
+          updatedAt: "23-09-2026 11:15:42",
+          dokumenKapal: [],
+        },
+      }, 201);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await new HttpArmadaKapalSubmissionRepository().create({
+      namaDistributor: "ABADI PUTERA WIRAJAYA, PT",
+      memilikiArmadaKapal: false,
+      dokumenKapal: [{
+        id: "unused-local",
+        source: "new",
+        file: new File(["pdf"], "unused.pdf", { type: "application/pdf" }),
+      }],
+    });
+    expect(calls).toEqual(["/api/submissions"]);
+    expect(result).toMatchObject({ memilikiArmadaKapal: false, dokumenKapal: [] });
+  });
+
   it("requests staged cleanup when final create fails", async () => {
     const calls: string[] = [];
     const fetchMock = vi.fn(async (input: string | URL | Request) => {

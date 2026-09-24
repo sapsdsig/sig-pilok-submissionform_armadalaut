@@ -107,12 +107,43 @@ describe("Google-backed services", () => {
     })).rejects.toMatchObject({ code: "MASTER_NOT_FOUND" });
   });
 
-  it("validates ownership must be true", () => {
+  it("accepts ownership false only with zero documents", () => {
+    expect(parseSubmissionInput({
+      namaDistributor: DISTRIBUTOR,
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+    })).toEqual({
+      namaDistributor: DISTRIBUTOR,
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+    });
     expect(() => parseSubmissionInput({
       namaDistributor: DISTRIBUTOR,
       memilikiArmadaKapal: false,
       dokumenKapal: [{ fileId: "one", fileName: "one.pdf" }],
     })).toThrow("Payload submission tidak valid");
+  });
+
+  it("creates TIDAK parent without child rows or Drive verification", async () => {
+    const gateway = new MockGoogleGateway();
+    const result = await new SubmissionService(gateway, TEST_CONFIG, () => UPDATED).create({
+      namaDistributor: DISTRIBUTOR,
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+    });
+    expect(result.memilikiArmadaKapal).toBe(false);
+    expect(result.dokumenKapal).toEqual([]);
+    expect(gateway.tables.submissions[1]).toEqual([DISTRIBUTOR, "TIDAK", UPDATED, UPDATED]);
+    expect(gateway.tables.kapal).toEqual([[...SUBMISSION_KAPAL_HEADERS]]);
+    expect(gateway.events.some((event) => event.startsWith("get:"))).toBe(false);
+  });
+
+  it("loads TIDAK case-insensitively with whitespace", async () => {
+    const gateway = new MockGoogleGateway();
+    gateway.tables.submissions.push([DISTRIBUTOR, "  tidak  ", CREATED, UPDATED]);
+    const result = await new SubmissionService(gateway, TEST_CONFIG).getByDistributor(DISTRIBUTOR);
+    expect(result?.memilikiArmadaKapal).toBe(false);
+    expect(result?.dokumenKapal).toEqual([]);
   });
 
   it("validates document count cannot be zero", () => {
@@ -215,6 +246,83 @@ describe("Google-backed services", () => {
     });
     expect(gateway.events).toContain("delete:file-a");
     expect(gateway.events).not.toContain("delete:file-b");
+  });
+
+  it("updates YA to TIDAK, clears children, then deletes old Drive files", async () => {
+    const gateway = new MockGoogleGateway();
+    existingTables(gateway);
+    const result = await new SubmissionService(gateway, TEST_CONFIG, () => UPDATED).update({
+      namaDistributor: DISTRIBUTOR,
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+    });
+    expect(result).toMatchObject({
+      memilikiArmadaKapal: false,
+      createdAt: CREATED,
+      updatedAt: UPDATED,
+      dokumenKapal: [],
+    });
+    expect(gateway.tables.submissions[1]).toEqual([DISTRIBUTOR, "TIDAK", CREATED, UPDATED]);
+    expect(gateway.tables.kapal.slice(1).every((row) => row.every((cell) => cell === ""))).toBe(true);
+    expect(gateway.events.indexOf("write")).toBeLessThan(gateway.events.indexOf("delete:file-a"));
+    expect(gateway.events.indexOf("write")).toBeLessThan(gateway.events.indexOf("delete:file-b"));
+  });
+
+  it("does not delete YA files when transition to TIDAK fails to write Sheets", async () => {
+    const gateway = new MockGoogleGateway();
+    existingTables(gateway);
+    gateway.writeError = new Error("write failed");
+    await expect(new SubmissionService(gateway, TEST_CONFIG).update({
+      namaDistributor: DISTRIBUTOR,
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+    })).rejects.toThrow("write failed");
+    expect(gateway.events).not.toContain("delete:file-a");
+    expect(gateway.events).not.toContain("delete:file-b");
+    expect(gateway.files.has("file-a")).toBe(true);
+    expect(gateway.files.has("file-b")).toBe(true);
+  });
+
+  it("keeps Sheets success when Drive cleanup fails after YA to TIDAK", async () => {
+    const gateway = new MockGoogleGateway();
+    existingTables(gateway);
+    gateway.deleteErrors.add("file-a");
+    const result = await new SubmissionService(gateway, TEST_CONFIG, () => UPDATED).update({
+      namaDistributor: DISTRIBUTOR,
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+    });
+    expect(result.memilikiArmadaKapal).toBe(false);
+    expect(gateway.tables.submissions[1][1]).toBe("TIDAK");
+    expect(gateway.tables.kapal.slice(1).every((row) => row.every((cell) => cell === ""))).toBe(true);
+  });
+
+  it("updates TIDAK to YA and creates verified children", async () => {
+    const gateway = new MockGoogleGateway();
+    gateway.tables.submissions.push([DISTRIBUTOR, "TIDAK", CREATED, CREATED]);
+    gateway.files.set("new-file", driveFile("new-file"));
+    const result = await new SubmissionService(gateway, TEST_CONFIG, () => UPDATED).update({
+      namaDistributor: DISTRIBUTOR,
+      memilikiArmadaKapal: true,
+      dokumenKapal: [{ fileId: "new-file", fileName: "new.pdf" }],
+    });
+    expect(result.memilikiArmadaKapal).toBe(true);
+    expect(gateway.tables.submissions[1]).toEqual([DISTRIBUTOR, "YA", CREATED, UPDATED]);
+    expect(gateway.tables.kapal[1].slice(0, 3)).toEqual([DISTRIBUTOR, "1", "new-file"]);
+  });
+
+  it("updates TIDAK to TIDAK while preserving created_at and zero children", async () => {
+    const gateway = new MockGoogleGateway();
+    gateway.tables.submissions.push([DISTRIBUTOR, "TIDAK", CREATED, CREATED]);
+    const result = await new SubmissionService(gateway, TEST_CONFIG, () => UPDATED).update({
+      namaDistributor: DISTRIBUTOR,
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+    });
+    expect(result.createdAt).toBe(CREATED);
+    expect(result.updatedAt).toBe(UPDATED);
+    expect(gateway.tables.submissions[1]).toEqual([DISTRIBUTOR, "TIDAK", CREATED, UPDATED]);
+    expect(gateway.tables.kapal).toEqual([[...SUBMISSION_KAPAL_HEADERS]]);
   });
 
   it("cleans staged uploads when final submission write fails", async () => {

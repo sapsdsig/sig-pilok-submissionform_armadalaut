@@ -9,11 +9,28 @@ const documentSchema = z.object({
   fileUrl: z.string().url().optional(),
 });
 
-const submissionSchema = z.object({
-  namaDistributor: z.string().trim().min(1),
-  memilikiArmadaKapal: z.literal(true),
-  dokumenKapal: z.array(documentSchema).min(1).max(MAX_DOCUMENTS),
-});
+const submissionSchema = z
+  .object({
+    namaDistributor: z.string().trim().min(1),
+    memilikiArmadaKapal: z.boolean(),
+    dokumenKapal: z.array(documentSchema).max(MAX_DOCUMENTS),
+  })
+  .superRefine((input, context) => {
+    if (input.memilikiArmadaKapal && input.dokumenKapal.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["dokumenKapal"],
+        message: "Minimal satu dokumen kapal wajib disertakan.",
+      });
+    }
+    if (!input.memilikiArmadaKapal && input.dokumenKapal.length > 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["dokumenKapal"],
+        message: "Dokumen kapal harus kosong jika tidak memiliki armada kapal.",
+      });
+    }
+  });
 
 export function parseSubmissionInput(value: unknown): SubmissionInput {
   const result = submissionSchema.safeParse(value);

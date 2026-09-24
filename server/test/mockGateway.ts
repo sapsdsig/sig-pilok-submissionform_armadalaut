@@ -60,6 +60,7 @@ export class MockGoogleGateway implements GoogleGateway {
   files = new Map<string, DriveFileRecord>();
   events: string[] = [];
   writeError: Error | null = null;
+  deleteErrors = new Set<string>();
 
   async getAccessToken(): Promise<string> {
     return "access-token";
@@ -111,6 +112,7 @@ export class MockGoogleGateway implements GoogleGateway {
 
   async deleteFile(fileId: string): Promise<void> {
     this.events.push(`delete:${fileId}`);
+    if (this.deleteErrors.has(fileId)) throw new Error("delete failed");
     this.files.delete(fileId);
   }
 

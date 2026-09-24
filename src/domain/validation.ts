@@ -10,13 +10,6 @@ const emptyDocumentSchema = z
   .object({
     id: z.string().min(1),
     source: z.literal("empty"),
-  })
-  .superRefine((_document, context) => {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Dokumen bukti kepemilikan kapal wajib dilampirkan.",
-      path: ["file"],
-    });
   });
 
 const existingDocumentSchema = z.object({
@@ -56,13 +49,43 @@ const documentSchema = z.union([
   newDocumentSchema,
 ]);
 
-export const armadaKapalFormSchema: z.ZodType<ArmadaKapalFormValues> = z.object({
-  namaDistributor: z.string().min(1, "Nama Distributor wajib dipilih."),
-  memilikiArmadaKapal: z.boolean().refine((value) => value === true, {
-    message: "Konfirmasi kepemilikan armada kapal wajib dipilih.",
-  }),
-  dokumenKapal: z
-    .array(documentSchema)
-    .min(1, "Dokumen bukti kepemilikan kapal wajib dilampirkan.")
-    .max(MAX_DOCUMENTS, `Maksimal ${MAX_DOCUMENTS} dokumen kapal.`),
-});
+export const armadaKapalFormSchema: z.ZodType<ArmadaKapalFormValues> = z
+  .object({
+    namaDistributor: z.string().min(1, "Nama Distributor wajib dipilih."),
+    memilikiArmadaKapal: z.boolean().nullable(),
+    dokumenKapal: z
+      .array(documentSchema)
+      .max(MAX_DOCUMENTS, `Maksimal ${MAX_DOCUMENTS} dokumen kapal.`),
+  })
+  .superRefine((values, context) => {
+    if (values.memilikiArmadaKapal === null) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Konfirmasi kepemilikan armada kapal wajib dipilih.",
+        path: ["memilikiArmadaKapal"],
+      });
+      return;
+    }
+
+    if (!values.memilikiArmadaKapal) return;
+
+    const completedDocuments = values.dokumenKapal.filter(
+      (document) => document.source !== "empty",
+    );
+    if (completedDocuments.length === 0 && values.dokumenKapal.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Dokumen bukti kepemilikan kapal wajib dilampirkan.",
+        path: ["dokumenKapal"],
+      });
+    }
+    values.dokumenKapal.forEach((document, index) => {
+      if (document.source === "empty") {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Dokumen bukti kepemilikan kapal wajib dilampirkan.",
+          path: ["dokumenKapal", index, "file"],
+        });
+      }
+    });
+  });

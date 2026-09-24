@@ -43,7 +43,7 @@ async function completeValidNewForm(
   combobox: HTMLElement,
 ) {
   await selectDistributor(user, combobox);
-  await user.click(screen.getByRole("checkbox", { name: /ya, distributor/i }));
+  await user.click(screen.getByRole("radio", { name: "Ya" }));
   await user.upload(
     screen.getByLabelText(/upload dokumen/i),
     new File(["pdf-content"], "kapal-1.pdf", { type: "application/pdf" }),
@@ -78,10 +78,18 @@ describe("PILOK Armada Kapal", () => {
     expect(combobox).toHaveValue("ABADI PUTERA WIRAJAYA, PT");
   });
 
-  it("tidak menyediakan opsi Tidak", async () => {
-    await setup();
-    expect(screen.queryByText(/^Tidak$/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /ya, distributor/i })).toBeInTheDocument();
+  it("menyediakan pilihan Ya dan Tidak yang mutual exclusive", async () => {
+    const { user } = await setup();
+    const yes = screen.getByRole("radio", { name: "Ya" });
+    const no = screen.getByRole("radio", { name: "Tidak" });
+    expect(yes).toBeInTheDocument();
+    expect(no).toBeInTheDocument();
+    await user.click(yes);
+    expect(yes).toBeChecked();
+    expect(no).not.toBeChecked();
+    await user.click(no);
+    expect(no).toBeChecked();
+    expect(yes).not.toBeChecked();
   });
 
   it("menyembunyikan dokumen sebelum konfirmasi Ya", async () => {
@@ -89,9 +97,24 @@ describe("PILOK Armada Kapal", () => {
     expect(screen.queryByText(/dokumen bukti kepemilikan kapal/i)).not.toBeInTheDocument();
   });
 
+  it("menyembunyikan dan mereset dokumen ketika pilihan berubah ke Tidak", async () => {
+    const { user } = await setup();
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
+    await user.upload(
+      screen.getByLabelText(/upload dokumen/i),
+      new File(["pdf"], "sementara.pdf", { type: "application/pdf" }),
+    );
+    expect(screen.getByText("sementara.pdf")).toBeVisible();
+    await user.click(screen.getByRole("radio", { name: "Tidak" }));
+    expect(screen.queryByText(/dokumen bukti kepemilikan kapal/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
+    expect(screen.queryByText("sementara.pdf")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Kapal 1" })).toBeVisible();
+  });
+
   it("menampilkan satu slot dokumen setelah konfirmasi Ya", async () => {
     const { user } = await setup();
-    await user.click(screen.getByRole("checkbox", { name: /ya, distributor/i }));
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
     expect(screen.getByRole("heading", { name: /dokumen bukti kepemilikan kapal/i })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Kapal 1" })).toBeVisible();
   });
@@ -115,14 +138,14 @@ describe("PILOK Armada Kapal", () => {
   it("menolak submit jika Ya tetapi dokumen masih kosong", async () => {
     const { user, combobox } = await setup();
     await selectDistributor(user, combobox);
-    await user.click(screen.getByRole("checkbox", { name: /ya, distributor/i }));
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
     await user.click(screen.getByRole("button", { name: "Simpan Data" }));
-    expect(await screen.findByText("Dokumen bukti kepemilikan kapal wajib dilampirkan.")).toBeVisible();
+    expect((await screen.findAllByText("Dokumen bukti kepemilikan kapal wajib dilampirkan."))[0]).toBeVisible();
   });
 
   it("menolak tipe file yang tidak diizinkan", async () => {
     const { user } = await setup();
-    await user.click(screen.getByRole("checkbox", { name: /ya, distributor/i }));
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
     await user.upload(
       screen.getByLabelText(/upload dokumen/i),
       new File(["text"], "catatan.txt", { type: "text/plain" }),
@@ -132,7 +155,7 @@ describe("PILOK Armada Kapal", () => {
 
   it("menolak file yang lebih besar dari 5 MB", async () => {
     const { user } = await setup();
-    await user.click(screen.getByRole("checkbox", { name: /ya, distributor/i }));
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
     const oversized = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "besar.pdf", {
       type: "application/pdf",
     });
@@ -142,14 +165,14 @@ describe("PILOK Armada Kapal", () => {
 
   it("menambah dokumen kapal dan memberi nomor berurutan", async () => {
     const { user } = await setup();
-    await user.click(screen.getByRole("checkbox", { name: /ya, distributor/i }));
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
     await user.click(screen.getByRole("button", { name: /tambah dokumen kapal/i }));
     expect(screen.getByRole("heading", { name: "Kapal 2" })).toBeVisible();
   });
 
   it("menghapus dan mengindeks ulang dokumen kapal", async () => {
     const { user } = await setup();
-    await user.click(screen.getByRole("checkbox", { name: /ya, distributor/i }));
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
     await user.click(screen.getByRole("button", { name: /tambah dokumen kapal/i }));
     await user.click(screen.getByRole("button", { name: "Hapus Kapal 1" }));
     expect(screen.getByRole("heading", { name: "Kapal 1" })).toBeVisible();
@@ -159,7 +182,7 @@ describe("PILOK Armada Kapal", () => {
 
   it("membatasi jumlah dokumen kapal sampai 10", async () => {
     const { user } = await setup();
-    await user.click(screen.getByRole("checkbox", { name: /ya, distributor/i }));
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
     const addButton = screen.getByRole("button", { name: /tambah dokumen kapal/i });
     for (let index = 1; index < 10; index += 1) await user.click(addButton);
     expect(screen.getByRole("heading", { name: "Kapal 10" })).toBeVisible();
@@ -173,7 +196,27 @@ describe("PILOK Armada Kapal", () => {
     await user.click(screen.getByRole("button", { name: "Simpan Data" }));
     const dialog = await screen.findByRole("dialog", { name: "Konfirmasi Penyimpanan" });
     expect(within(dialog).getByText("ABADI PUTERA WIRAJAYA, PT")).toBeVisible();
+    expect(within(dialog).getByText("Memiliki Armada Kapal")).toBeVisible();
+    expect(within(dialog).getByText("Ya")).toBeVisible();
     expect(within(dialog).getByText("1 dokumen")).toBeVisible();
+  });
+
+  it("membuat submission Tidak tanpa dokumen dan tanpa jumlah dokumen di konfirmasi", async () => {
+    const { user, combobox, repositories } = await setup();
+    const create = vi.spyOn(repositories.submissions, "create");
+    await selectDistributor(user, combobox);
+    await user.click(screen.getByRole("radio", { name: "Tidak" }));
+    await user.click(screen.getByRole("button", { name: "Simpan Data" }));
+    const dialog = await screen.findByRole("dialog", { name: "Konfirmasi Penyimpanan" });
+    expect(within(dialog).getByText("Tidak")).toBeVisible();
+    expect(within(dialog).queryByText("Jumlah Dokumen Kapal")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("0 dokumen")).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Ya, Simpan" }));
+    expect(await screen.findByRole("heading", { name: "Data berhasil disimpan" })).toBeVisible();
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ memilikiArmadaKapal: false, dokumenKapal: [] }),
+      expect.any(Object),
+    );
   });
 
   it("membatalkan konfirmasi tanpa menyimpan", async () => {
@@ -203,13 +246,14 @@ describe("PILOK Armada Kapal", () => {
     await user.click(await screen.findByRole("button", { name: "Ya, Simpan" }));
     await user.click(await screen.findByRole("button", { name: "Kembali ke Form" }));
     expect(await screen.findByRole("combobox", { name: /nama distributor/i })).toHaveValue("");
-    expect(screen.getByRole("checkbox", { name: /ya, distributor/i })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "Ya" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "Tidak" })).not.toBeChecked();
   });
 
   it("memuat existing submission dan menampilkan action Lihat File yang aman", async () => {
     const { user, combobox } = await setup();
     await selectDistributor(user, combobox, "ADE LESTARI SEJATI, PT");
-    expect(screen.getByRole("checkbox", { name: /ya, distributor/i })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Ya" })).toBeChecked();
     expect(screen.getByText("✓ Dokumen sudah tersimpan")).toBeVisible();
     expect(screen.getByText("bukti-kepemilikan-kapal-ade.pdf")).toBeVisible();
     expect(screen.getByRole("link", { name: "Lihat File" })).toHaveAttribute(
@@ -217,6 +261,61 @@ describe("PILOK Armada Kapal", () => {
       "https://drive.google.com/file/d/existing-kapal-1/view",
     );
     expect(screen.getByRole("link", { name: "Lihat File" })).toHaveAttribute("target", "_blank");
+  });
+
+  it("memuat existing Tidak dan dapat menyimpan ulang tanpa dokumen", async () => {
+    const submissions = new MockArmadaKapalSubmissionRepository([{
+      namaDistributor: "ADE LESTARI SEJATI, PT",
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+      createdAt: "2026-01-15T03:30:00.000Z",
+      updatedAt: "2026-01-15T03:30:00.000Z",
+    }]);
+    const update = vi.spyOn(submissions, "update");
+    const { user, combobox } = await setup({
+      distributors: new MockDistributorRepository(),
+      submissions,
+    });
+    await selectDistributor(user, combobox, "ADE LESTARI SEJATI, PT");
+    expect(screen.getByRole("radio", { name: "Tidak" })).toBeChecked();
+    expect(screen.queryByText(/dokumen bukti kepemilikan kapal/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Simpan Data" }));
+    await user.click(await screen.findByRole("button", { name: "Ya, Simpan" }));
+    expect(await screen.findByRole("heading", { name: "Data berhasil disimpan" })).toBeVisible();
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ memilikiArmadaKapal: false, dokumenKapal: [] }),
+      expect.any(Object),
+    );
+  });
+
+  it("mewajibkan dokumen ketika existing Tidak diubah menjadi Ya", async () => {
+    const submissions = new MockArmadaKapalSubmissionRepository([{
+      namaDistributor: "ADE LESTARI SEJATI, PT",
+      memilikiArmadaKapal: false,
+      dokumenKapal: [],
+    }]);
+    const { user, combobox } = await setup({
+      distributors: new MockDistributorRepository(),
+      submissions,
+    });
+    await selectDistributor(user, combobox, "ADE LESTARI SEJATI, PT");
+    await user.click(screen.getByRole("radio", { name: "Ya" }));
+    await user.click(screen.getByRole("button", { name: "Simpan Data" }));
+    expect((await screen.findAllByText("Dokumen bukti kepemilikan kapal wajib dilampirkan."))[0]).toBeVisible();
+  });
+
+  it("mengirim zero documents ketika existing Ya diubah menjadi Tidak", async () => {
+    const { user, combobox, repositories } = await setup();
+    const update = vi.spyOn(repositories.submissions, "update");
+    await selectDistributor(user, combobox, "ADE LESTARI SEJATI, PT");
+    await user.click(screen.getByRole("radio", { name: "Tidak" }));
+    await user.click(screen.getByRole("button", { name: "Simpan Data" }));
+    await user.click(await screen.findByRole("button", { name: "Ya, Simpan" }));
+    expect(await screen.findByRole("heading", { name: "Data berhasil disimpan" })).toBeVisible();
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ memilikiArmadaKapal: false, dokumenKapal: [] }),
+      expect.any(Object),
+    );
   });
 
   it("mengganti dokumen existing dengan file baru", async () => {
@@ -236,7 +335,7 @@ describe("PILOK Armada Kapal", () => {
     const viewLink = screen.getByRole("link", { name: "Lihat File" });
     await user.click(viewLink);
     expect(combobox).toHaveValue("ADE LESTARI SEJATI, PT");
-    expect(screen.getByRole("checkbox", { name: /ya, distributor/i })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Ya" })).toBeChecked();
     expect(screen.getByText("bukti-kepemilikan-kapal-ade.pdf")).toBeVisible();
   });
 
@@ -323,5 +422,12 @@ describe("PILOK Armada Kapal", () => {
     };
     await repository.create(submission);
     await expect(repository.create(submission)).rejects.toThrow("sudah tersimpan");
+  });
+
+  it("tidak lagi menampilkan label mode atau helper rule lama", async () => {
+    await setup();
+    expect(screen.queryByText("Mode Buat Baru")).not.toBeInTheDocument();
+    expect(screen.queryByText("Mode Edit")).not.toBeInTheDocument();
+    expect(screen.queryByText(/tanpa armada kapal tidak perlu mengisi/i)).not.toBeInTheDocument();
   });
 });

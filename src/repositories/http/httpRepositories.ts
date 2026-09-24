@@ -14,7 +14,7 @@ import { cleanupUploads, uploadDocument, type StagedUpload } from "./uploadClien
 
 type SubmissionDto = {
   namaDistributor: string;
-  memilikiArmadaKapal: true;
+  memilikiArmadaKapal: boolean;
   createdAt: string;
   updatedAt: string;
   dokumenKapal: Array<{
@@ -28,14 +28,14 @@ type SubmissionDto = {
 
 type SubmissionPayload = {
   namaDistributor: string;
-  memilikiArmadaKapal: true;
+  memilikiArmadaKapal: boolean;
   dokumenKapal: Array<{ fileId: string; fileName: string; fileUrl?: string }>;
 };
 
 function mapSubmission(dto: SubmissionDto): ArmadaKapalSubmission {
   return {
     namaDistributor: dto.namaDistributor,
-    memilikiArmadaKapal: true,
+    memilikiArmadaKapal: dto.memilikiArmadaKapal,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
     dokumenKapal: dto.dokumenKapal.map((document) => ({ ...document })),
@@ -74,11 +74,12 @@ export class HttpArmadaKapalSubmissionRepository implements ArmadaKapalSubmissio
   ): Promise<ArmadaKapalSubmission> {
     const staged: StagedUpload[] = [];
     try {
-      if (submission.dokumenKapal.some((document) => document.source === "new")) {
+      const submissionDocuments = submission.memilikiArmadaKapal ? submission.dokumenKapal : [];
+      if (submissionDocuments.some((document) => document.source === "new")) {
         options?.onStageChange?.("uploading");
       }
       const documents = [] as SubmissionPayload["dokumenKapal"];
-      for (const document of submission.dokumenKapal) {
+      for (const document of submissionDocuments) {
         if (document.source === "new") {
           const uploaded = await uploadDocument(submission.namaDistributor, document.file);
           staged.push(uploaded);
@@ -94,7 +95,7 @@ export class HttpArmadaKapalSubmissionRepository implements ArmadaKapalSubmissio
       options?.onStageChange?.("saving");
       const payload: SubmissionPayload = {
         namaDistributor: submission.namaDistributor,
-        memilikiArmadaKapal: true,
+        memilikiArmadaKapal: submission.memilikiArmadaKapal,
         dokumenKapal: documents,
       };
       const response = await apiRequest<{ submission: SubmissionDto }>("/api/submissions", {

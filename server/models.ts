@@ -22,7 +22,7 @@ export type SubmissionDocumentInput = {
 
 export type SubmissionInput = {
   namaDistributor: string;
-  memilikiArmadaKapal: true;
+  memilikiArmadaKapal: boolean;
   dokumenKapal: SubmissionDocumentInput[];
 };
 
@@ -36,7 +36,7 @@ export type SubmissionDocument = {
 
 export type SubmissionRecord = {
   namaDistributor: string;
-  memilikiArmadaKapal: true;
+  memilikiArmadaKapal: boolean;
   createdAt: string;
   updatedAt: string;
   dokumenKapal: SubmissionDocument[];

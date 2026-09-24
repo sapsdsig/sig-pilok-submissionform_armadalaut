@@ -46,10 +46,18 @@ function safeDriveUrl(value: string | undefined): string {
   }
 }
 
+function ownsVessels(value: string | undefined): boolean {
+  const normalized = value?.trim().toUpperCase();
+  if (normalized === "YA") return true;
+  if (normalized === "TIDAK") return false;
+  return false;
+}
+
 function findRecord(tables: SpreadsheetTables, distributor: string): SubmissionRecord | null {
   const parent = tables.submissions.slice(1).find((row) => row[0]?.trim() === distributor);
   if (!parent) return null;
-  const documents = tables.kapal
+  const memilikiArmadaKapal = ownsVessels(parent[1]);
+  const documents = memilikiArmadaKapal ? tables.kapal
     .slice(1)
     .filter((row) => row[0]?.trim() === distributor && row[2]?.trim())
     .sort((left, right) => Number(left[1]) - Number(right[1]))
@@ -59,10 +67,10 @@ function findRecord(tables: SpreadsheetTables, distributor: string): SubmissionR
       fileId: row[2],
       fileName: row[3] ?? "",
       fileUrl: safeDriveUrl(row[4]),
-    }));
+    })) : [];
   return {
     namaDistributor: parent[0],
-    memilikiArmadaKapal: parent[1]?.trim().toUpperCase() === "YA",
+    memilikiArmadaKapal,
     createdAt: parent[2] ?? "",
     updatedAt: parent[3] ?? "",
     dokumenKapal: documents,
@@ -121,6 +129,21 @@ export class SubmissionService {
     }));
   }
 
+  private async cleanupRemovedFiles(fileIds: string[]): Promise<void> {
+    const results = await Promise.allSettled(
+      fileIds.map(async (fileId) => {
+        const oldFile = await this.uploads.verify(fileId);
+        await this.gateway.deleteFile(oldFile.id);
+      }),
+    );
+    const failures = results.filter((result) => result.status === "rejected").length;
+    if (failures > 0) {
+      process.stderr.write(
+        `[SubmissionService] Warning: ${failures} cleanup file Drive gagal setelah Sheets berhasil.\n`,
+      );
+    }
+  }
+
   async create(input: SubmissionInput): Promise<SubmissionRecord> {
     await this.distributors.assertExists(input.namaDistributor);
     const verified = await this.verifyDocuments(input);
@@ -134,7 +157,7 @@ export class SubmissionService {
       const documents = this.normalizedDocuments(input, verified);
       const submissions = [
         ...tables.submissions,
-        [input.namaDistributor, "YA", timestamp, timestamp],
+        [input.namaDistributor, input.memilikiArmadaKapal ? "YA" : "TIDAK", timestamp, timestamp],
       ];
       const kapal = [
         ...tables.kapal,
@@ -152,7 +175,7 @@ export class SubmissionService {
       await Promise.allSettled([this.gateway.markFilesCommitted(verified.map((file) => file.id))]);
       return {
         namaDistributor: input.namaDistributor,
-        memilikiArmadaKapal: true,
+        memilikiArmadaKapal: input.memilikiArmadaKapal,
         createdAt: timestamp,
         updatedAt: timestamp,
         dokumenKapal: documents.map((document) => ({
@@ -183,7 +206,12 @@ export class SubmissionService {
         tables.submissions[0],
         ...tables.submissions.slice(1).map((row) =>
           row[0]?.trim() === input.namaDistributor
-            ? [input.namaDistributor, "YA", current.createdAt, timestamp]
+            ? [
+                input.namaDistributor,
+                input.memilikiArmadaKapal ? "YA" : "TIDAK",
+                current.createdAt,
+                timestamp,
+              ]
             : row,
         ),
       ];
@@ -213,8 +241,10 @@ export class SubmissionService {
         ),
       };
       const finalIds = new Set(documents.map((document) => document.fileId));
-      const removedIds = current.dokumenKapal
-        .map((document) => document.fileId)
+      const removedIds = tables.kapal
+        .slice(1)
+        .filter((row) => row[0]?.trim() === input.namaDistributor && row[2]?.trim())
+        .map((row) => row[2].trim())
         .filter((fileId) => !finalIds.has(fileId));
 
       await this.gateway.writeSubmissionTables(nextTables);
@@ -222,14 +252,11 @@ export class SubmissionService {
         this.gateway.markFilesCommitted(
           verified.filter((file) => file.appProperties.staged === "true").map((file) => file.id),
         ),
-        ...removedIds.map(async (fileId) => {
-          const oldFile = await this.uploads.verify(fileId);
-          await this.gateway.deleteFile(oldFile.id);
-        }),
+        this.cleanupRemovedFiles(removedIds),
       ]);
       return {
         namaDistributor: input.namaDistributor,
-        memilikiArmadaKapal: true,
+        memilikiArmadaKapal: input.memilikiArmadaKapal,
         createdAt: current.createdAt,
         updatedAt: timestamp,
         dokumenKapal: documents.map((document) => ({

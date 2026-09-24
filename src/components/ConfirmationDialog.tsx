@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 type ConfirmationDialogProps = {
   open: boolean;
   distributor: string;
+  ownsShip: boolean;
   documentCount: number;
   submitting: boolean;
   progressLabel?: string;
@@ -13,6 +14,7 @@ type ConfirmationDialogProps = {
 export function ConfirmationDialog({
   open,
   distributor,
+  ownsShip,
   documentCount,
   submitting,
   progressLabel,
@@ -52,9 +54,13 @@ export function ConfirmationDialog({
             <dd title={distributor}>{distributor}</dd>
           </div>
           <div>
+            <dt>Memiliki Armada Kapal</dt>
+            <dd>{ownsShip ? "Ya" : "Tidak"}</dd>
+          </div>
+          {ownsShip ? <div>
             <dt>Jumlah Dokumen Kapal</dt>
             <dd>{documentCount} dokumen</dd>
-          </div>
+          </div> : null}
         </dl>
         <div className="dialog-actions">
           <button ref={cancelRef} type="button" className="button-secondary" disabled={submitting} onClick={onCancel}>

@@ -26,7 +26,7 @@ import {
 
 const EMPTY_VALUES: ArmadaKapalFormValues = {
   namaDistributor: "",
-  memilikiArmadaKapal: false,
+  memilikiArmadaKapal: null,
   dokumenKapal: [],
 };
 
@@ -99,7 +99,7 @@ export function ArmadaKapalForm({ repositories }: { repositories: Repositories }
         setMode("edit");
         reset({
           namaDistributor: existing.namaDistributor,
-          memilikiArmadaKapal: true,
+          memilikiArmadaKapal: existing.memilikiArmadaKapal,
           dokumenKapal: existing.dokumenKapal.map((document) => ({ ...document })),
         });
       }
@@ -127,15 +127,17 @@ export function ArmadaKapalForm({ repositories }: { repositories: Repositories }
   };
 
   const save = async () => {
-    if (!pendingValues) return;
+    if (!pendingValues || pendingValues.memilikiArmadaKapal === null) return;
     setSubmitError(null);
 
     const submission: ArmadaKapalSubmission = {
       namaDistributor: pendingValues.namaDistributor,
-      memilikiArmadaKapal: true,
-      dokumenKapal: pendingValues.dokumenKapal.filter(
-        (document): document is KapalDocument => document.source !== "empty",
-      ),
+      memilikiArmadaKapal: pendingValues.memilikiArmadaKapal,
+      dokumenKapal: pendingValues.memilikiArmadaKapal
+        ? pendingValues.dokumenKapal.filter(
+            (document): document is KapalDocument => document.source !== "empty",
+          )
+        : [],
     };
 
     try {
@@ -167,7 +169,9 @@ export function ArmadaKapalForm({ repositories }: { repositories: Repositories }
   };
 
   const documentCount = useMemo(
-    () => pendingValues?.dokumenKapal.filter((document) => document.source !== "empty").length ?? 0,
+    () => pendingValues?.memilikiArmadaKapal
+      ? pendingValues.dokumenKapal.filter((document) => document.source !== "empty").length
+      : 0,
     [pendingValues],
   );
 
@@ -250,7 +254,7 @@ export function ArmadaKapalForm({ repositories }: { repositories: Repositories }
           <SectionHeader
             number={2}
             title="Kepemilikan Armada Kapal"
-            description="Konfirmasikan kepemilikan lalu lampirkan bukti untuk setiap kapal."
+            description="Pilih status kepemilikan armada kapal distributor."
           />
           <Controller
             control={control}
@@ -260,32 +264,42 @@ export function ArmadaKapalForm({ repositories }: { repositories: Repositories }
                 <legend>
                   Apakah memiliki armada kapal? <RequiredMark />
                 </legend>
-                <label className={`confirmation-check ${fieldState.error ? "check-error" : ""}`}>
-                  <input
-                    type="checkbox"
-                    ref={field.ref}
-                    name={field.name}
-                    checked={field.value}
-                    aria-invalid={Boolean(fieldState.error) || undefined}
-                    aria-describedby={fieldState.error ? "kepemilikan-error" : "kepemilikan-helper"}
-                    onBlur={field.onBlur}
-                    onChange={(event) => {
-                      const checked = event.target.checked;
-                      field.onChange(checked);
-                      if (checked && fieldArray.fields.length === 0) {
-                        fieldArray.append(createEmptyDocument());
-                      } else if (!checked) {
-                        fieldArray.replace([]);
-                      }
-                      void trigger(["memilikiArmadaKapal", "dokumenKapal"]);
-                    }}
-                  />
-                  <span className="custom-checkbox" aria-hidden="true">✓</span>
-                  <span>Ya, distributor memiliki armada kapal.</span>
-                </label>
-                <p id="kepemilikan-helper" className="field-helper">
-                  Distributor tanpa armada kapal tidak perlu mengisi form ini.
-                </p>
+                <div className="ownership-options">
+                  {([
+                    [true, "Ya"],
+                    [false, "Tidak"],
+                  ] as const).map(([value, label], index) => (
+                    <label
+                      key={label}
+                      className={`ownership-option ${fieldState.error ? "ownership-error" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        ref={index === 0 ? field.ref : undefined}
+                        name={field.name}
+                        value={String(value)}
+                        checked={field.value === value}
+                        aria-invalid={Boolean(fieldState.error) || undefined}
+                        aria-describedby={fieldState.error ? "kepemilikan-error" : undefined}
+                        onBlur={field.onBlur}
+                        onChange={() => {
+                          field.onChange(value);
+                          if (value && fieldArray.fields.length === 0) {
+                            fieldArray.append(createEmptyDocument());
+                          } else if (!value) {
+                            fieldArray.replace([]);
+                          }
+                          window.setTimeout(
+                            () => void trigger(["memilikiArmadaKapal", "dokumenKapal"]),
+                            0,
+                          );
+                        }}
+                      />
+                      <span className="custom-radio" aria-hidden="true" />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
                 <FieldError id="kepemilikan-error">{fieldState.error?.message}</FieldError>
               </fieldset>
             )}
@@ -303,10 +317,6 @@ export function ArmadaKapalForm({ repositories }: { repositories: Repositories }
         </SectionCard>
 
         <ActionBar>
-          <div>
-            <p>{mode === "edit" ? "Mode Edit" : "Mode Buat Baru"}</p>
-            <span>Periksa kembali data sebelum menyimpan.</span>
-          </div>
           <button
             type="submit"
             className="button-primary save-button"
@@ -320,6 +330,7 @@ export function ArmadaKapalForm({ repositories }: { repositories: Repositories }
       <ConfirmationDialog
         open={confirmationOpen}
         distributor={pendingValues?.namaDistributor ?? ""}
+        ownsShip={pendingValues?.memilikiArmadaKapal === true}
         documentCount={documentCount}
         submitting={isSubmitting}
         progressLabel={saveStage === "uploading" ? "Mengunggah..." : "Menyimpan..."}
