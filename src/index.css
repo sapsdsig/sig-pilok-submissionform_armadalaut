@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #0f172a;
+    background: #f1f5f9;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { min-width: 320px; scroll-behavior: smooth; }
+
+  body { margin: 0; min-width: 320px; min-height: 100vh; background: #f1f5f9; }
+
+  button, input { font: inherit; }
+
+  button, label[for] { -webkit-tap-highlight-color: transparent; }
+
+  button:focus-visible,
+  input:focus-visible,
+  label[for]:has(+ input:focus-visible) {
+    outline: 3px solid rgba(244, 49, 63, 0.2);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .form-shell { @apply min-h-screen bg-slate-100 pb-8; }
+
+  .brand-header {
+    @apply w-full border-b border-slate-200 bg-white;
+    box-shadow: 0 1px 0 rgb(15 23 42 / 0.02);
+  }
+
+  .brand-header-inner {
+    @apply mx-auto flex max-w-5xl flex-col items-start gap-4 px-4 py-6 sm:flex-row sm:items-center sm:gap-7 sm:px-6 sm:py-8;
+  }
+  .brand-logo-group { @apply flex max-w-full shrink-0 items-center gap-3 sm:gap-4; }
+  .brand-sig-logo-frame { @apply relative h-11 w-[4.8125rem] shrink-0 overflow-hidden sm:h-14 sm:w-24; }
+  .brand-sig-logo-image {
+    @apply absolute max-w-none;
+    left: -73%;
+    top: -71%;
+    width: 245%;
+  }
+  .brand-logo-divider { @apply h-8 w-px shrink-0 bg-slate-200 sm:h-10; }
+  .brand-pilok-logo-image { @apply h-9 w-auto max-w-[7.5rem] shrink-0 object-contain sm:h-11 sm:max-w-[9rem]; }
+  .brand-title-block { @apply min-w-0 max-w-full sm:border-l sm:border-slate-200 sm:pl-7; }
+  .brand-eyebrow { @apply text-[0.6875rem] font-bold uppercase tracking-[0.18em] text-sig; }
+  .brand-title-block h1 { @apply mt-1 text-2xl font-bold tracking-tight text-ink sm:text-3xl; }
+  .brand-subtitle { @apply mt-1.5 max-w-2xl text-sm leading-6 text-slate-600; }
+  .eyebrow { @apply mb-1 text-xs font-bold uppercase tracking-[0.14em] text-sig; }
+
+  .form-container { @apply mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8; }
+  form { @apply flex flex-col gap-6; }
+
+  .section-card {
+    @apply min-w-0 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.035);
+  }
+  .section-header { @apply mb-6 flex items-start gap-3; }
+  .step-badge { @apply mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sig text-sm font-bold text-white; }
+  .section-header h2 { @apply m-0 text-xl font-bold leading-8 tracking-tight text-ink; }
+  .section-header p { @apply mt-1 max-w-2xl text-sm leading-6 text-slate-600; }
+
+  .field-group { @apply min-w-0; }
+  .field-group > label:not(.confirmation-check), .field-group legend { @apply mb-2 block text-sm font-semibold text-slate-800; }
+  .required-mark { @apply text-sig; }
+  .field-helper { @apply mt-2 text-xs leading-relaxed text-slate-500; }
+  .field-error { @apply mt-2 text-sm font-medium leading-relaxed text-red-700; }
+
+  .searchable-select { @apply relative min-w-0 max-w-full; }
+  .select-control-wrap { @apply relative min-w-0; }
+  .select-control {
+    @apply h-11 w-full max-w-full truncate rounded-lg border border-slate-300 bg-white px-3.5 pr-11 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-400 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500;
+  }
+  .select-control:focus { @apply border-sig ring-4 ring-red-100; }
+  .select-control.input-error { @apply border-red-500 ring-red-50; }
+  .select-chevron { @apply absolute right-0 top-0 flex h-11 w-11 items-center justify-center border-0 bg-transparent text-slate-500; }
+  .select-chevron svg { @apply h-5 w-5; }
+  .select-menu {
+    @apply absolute z-30 mt-1.5 max-h-60 w-full min-w-0 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5;
+    box-shadow: 0 12px 30px rgb(15 23 42 / 0.14);
+  }
+  .select-option { @apply flex w-full min-w-0 items-center justify-between gap-3 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left text-sm text-slate-700; }
+  .select-option span:first-child { @apply min-w-0 truncate; }
+  .select-option:hover { @apply bg-slate-50 text-slate-950; }
+  .select-option.is-active { @apply bg-red-50 text-slate-950; }
+  .select-option[aria-selected="true"] { @apply font-semibold text-sig; }
+  .select-empty { @apply px-3 py-5 text-center text-sm text-slate-500; }
+
+  .status-banner { @apply flex min-w-0 items-start gap-3 rounded-xl border px-4 py-3 text-sm leading-6; }
+  .status-indicator { @apply mt-2 h-2 w-2 shrink-0 rounded-full bg-current; }
+  .status-title { @apply font-bold; }
+  .status-copy { @apply min-w-0 break-words; }
+  .status-info { @apply border-blue-200 bg-blue-50 text-blue-800; }
+  .status-success { @apply border-emerald-200 bg-emerald-50 text-emerald-800; }
+  .status-warning { @apply border-amber-200 bg-amber-50 text-amber-900; }
+  .status-error { @apply border-red-200 bg-red-50 text-red-800; }
+  .status-copy:has(.banner-action) { @apply flex flex-wrap items-center gap-x-4; }
+  .banner-action { @apply ml-auto shrink-0; }
+
+  .loading-block { @apply flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-600; }
+  .spinner, .button-spinner { @apply inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent; }
+
+  .ownership-field { @apply min-w-0 border-0 p-0; }
+  .ownership-field > .confirmation-check { @apply flex min-h-[56px] w-full cursor-pointer items-center gap-3 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100; }
+  .confirmation-check > span:last-child { @apply min-w-0 leading-5; }
+  .confirmation-check input { @apply sr-only; }
+  .custom-checkbox { @apply flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 border-slate-400 bg-white text-sm font-bold text-transparent transition; }
+  .confirmation-check:has(input:checked) { @apply border-red-200 bg-red-50; }
+  .confirmation-check input:checked + .custom-checkbox { @apply border-sig bg-sig text-white; }
+  .confirmation-check:has(input:focus-visible) { @apply ring-4 ring-red-50; }
+  .confirmation-check.check-error { @apply border-red-500; }
+
+  .document-section { @apply mt-7 min-w-0 border-t border-slate-100 pt-7; }
+  .field-heading { @apply mb-4 flex min-w-0 items-start justify-between gap-4; }
+  .field-heading h3 { @apply text-sm font-semibold text-slate-800; }
+  .field-heading p { @apply mt-1 text-xs leading-relaxed text-slate-500; }
+  .document-counter { @apply shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-600; }
+  .document-list { @apply flex min-w-0 flex-col gap-4; }
+  .document-item { @apply min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4; }
+  .document-item-header { @apply mb-3 flex min-w-0 items-center justify-between gap-3; }
+  .ship-label { @apply flex min-w-0 items-center gap-3; }
+  .ship-number { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-sm font-bold text-white; }
+  .ship-label h4 { @apply text-sm font-semibold text-slate-800; }
+  .stored-label { @apply block text-xs font-medium text-emerald-700; }
+  .upload-box { @apply flex min-h-[116px] w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-5 text-center text-sm font-semibold text-slate-700 transition hover:border-sig hover:bg-red-50; }
+  .upload-box svg { @apply mb-2 h-6 w-6 text-sig; }
+  .upload-box small { @apply mt-1 font-normal text-slate-500; }
+  .upload-box.upload-error { @apply border-red-500 bg-red-50; }
+  .file-selected { @apply flex min-w-0 items-center gap-3 rounded-xl border border-emerald-200 bg-white p-3; }
+  .file-selected.file-error { @apply border-red-400; }
+  .file-type-icon { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-[10px] font-bold text-sig; }
+  .file-details { @apply min-w-0 flex-1; }
+  .file-details p { @apply truncate text-sm font-semibold text-slate-800; }
+  .file-details span { @apply text-xs text-slate-500; }
+  .replace-file { @apply shrink-0 cursor-pointer; }
+  .view-file { @apply shrink-0; }
+  .add-document { @apply mt-4; }
+  .limit-note { @apply mt-2 text-xs text-slate-500; }
+
+  .button-primary, .button-secondary, .button-text {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-55;
+  }
+  .button-primary { @apply border border-slate-900 bg-slate-900 px-5 font-bold text-white shadow-sm hover:border-black hover:bg-black; }
+  .button-secondary { @apply border border-slate-300 bg-white px-4 font-bold text-slate-700 shadow-sm hover:border-sig hover:bg-red-50 hover:text-slate-900; }
+  .button-text { @apply min-h-0 border-0 bg-transparent px-2.5 py-2 font-bold text-red-700 hover:bg-red-100 hover:text-red-800; }
+  .danger-text { @apply text-red-700 hover:text-red-900; }
+
+  .action-bar {
+    @apply flex min-w-0 items-center justify-between gap-5 rounded-2xl border border-slate-200 bg-white p-5;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.035);
+  }
+  .action-bar p { @apply text-sm font-semibold text-slate-800; }
+  .action-bar span { @apply text-xs text-slate-500; }
+  .save-button { @apply min-w-[150px]; }
+
+  .dialog-backdrop { @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]; }
+  .dialog-panel { @apply max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 text-center shadow-2xl; }
+  .dialog-icon { @apply mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-xl font-bold text-sig; }
+  .dialog-panel h2 { @apply text-xl font-bold text-ink; }
+  .dialog-panel > p { @apply mt-2 text-sm text-slate-500; }
+  .confirmation-summary { @apply my-5 min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-4 text-left; }
+  .confirmation-summary div + div { @apply mt-3 border-t border-slate-200 pt-3; }
+  .confirmation-summary dt { @apply text-xs font-medium text-slate-500; }
+  .confirmation-summary dd { @apply mt-1 break-words text-sm font-semibold text-slate-800; }
+  .dialog-actions { @apply grid grid-cols-2 gap-3; }
+
+  .success-state { @apply rounded-2xl border border-slate-200 bg-white px-7 py-12 text-center shadow-card; }
+  .success-check { @apply mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl font-bold text-emerald-700; }
+  .success-state h2 { @apply text-2xl font-bold text-ink; }
+  .success-state > p:not(.eyebrow) { @apply mx-auto mt-3 max-w-lg text-sm leading-7 text-slate-600; }
+  .success-state strong { @apply my-1 block break-words text-slate-900; }
+  .success-state .button-primary { @apply mt-6; }
+  .site-footer { @apply mx-auto mt-0 max-w-5xl px-4 pb-1 text-center text-xs text-slate-400 sm:px-6; }
+}
+
+@media (max-width: 720px) {
+  .section-card { @apply rounded-2xl; }
+  .section-header { @apply mb-5 gap-3; }
+  .file-selected { @apply flex-wrap; }
+  .file-details { flex-basis: calc(100% - 3.25rem); }
+  .replace-file { @apply ml-[3.25rem]; }
+  .view-file { @apply ml-[3.25rem]; }
+  .action-bar { @apply flex-col items-stretch rounded-xl px-5; }
+  .action-bar > div { @apply text-center; }
+  .save-button { @apply w-full; }
+}
+
+@media (max-width: 390px) {
+  .section-card { @apply p-4; }
+  .document-item { @apply p-3; }
+  .document-item-header { @apply items-start; }
+  .dialog-panel { @apply p-5; }
+  .dialog-actions { @apply grid-cols-1; }
+  .dialog-actions .button-primary { @apply row-start-1; }
+}
+
+@media (max-width: 479px) {
+  .brand-header-inner { @apply py-5; }
+  .brand-title-block h1 { @apply text-xl; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
