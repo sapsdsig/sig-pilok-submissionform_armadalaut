@@ -250,17 +250,14 @@ describe("PILOK Armada Kapal", () => {
     expect(screen.getByRole("radio", { name: "Tidak" })).not.toBeChecked();
   });
 
-  it("memuat existing submission dan menampilkan action Lihat File yang aman", async () => {
+  it("menampilkan existing document sebagai dokumen tersimpan tanpa action lihat file", async () => {
     const { user, combobox } = await setup();
     await selectDistributor(user, combobox, "ADE LESTARI SEJATI, PT");
     expect(screen.getByRole("radio", { name: "Ya" })).toBeChecked();
     expect(screen.getByText("✓ Dokumen sudah tersimpan")).toBeVisible();
     expect(screen.getByText("bukti-kepemilikan-kapal-ade.pdf")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Lihat File" })).toHaveAttribute(
-      "href",
-      "https://drive.google.com/file/d/existing-kapal-1/view",
-    );
-    expect(screen.getByRole("link", { name: "Lihat File" })).toHaveAttribute("target", "_blank");
+    expect(screen.queryByRole("link", { name: /lihat file/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Ganti Dokumen")).toBeInTheDocument();
   });
 
   it("memuat existing Tidak dan dapat menyimpan ulang tanpa dokumen", async () => {
@@ -329,14 +326,41 @@ describe("PILOK Armada Kapal", () => {
     expect(screen.getByText("Siap disimpan")).toBeVisible();
   });
 
-  it("membuka Lihat File tanpa mengubah state form", async () => {
+  it("tidak merender Drive URL atau filename existing sebagai link", async () => {
     const { user, combobox } = await setup();
     await selectDistributor(user, combobox, "ADE LESTARI SEJATI, PT");
-    const viewLink = screen.getByRole("link", { name: "Lihat File" });
-    await user.click(viewLink);
-    expect(combobox).toHaveValue("ADE LESTARI SEJATI, PT");
-    expect(screen.getByRole("radio", { name: "Ya" })).toBeChecked();
-    expect(screen.getByText("bukti-kepemilikan-kapal-ade.pdf")).toBeVisible();
+    const filename = screen.getByText("bukti-kepemilikan-kapal-ade.pdf");
+    expect(filename.closest("a")).toBeNull();
+    expect(document.querySelector('a[href*="drive.google.com"]')).toBeNull();
+  });
+
+  it("menghapus existing document ketika dokumen lain membuat final state tetap valid", async () => {
+    const submissions = new MockArmadaKapalSubmissionRepository([{
+      namaDistributor: "ADE LESTARI SEJATI, PT",
+      memilikiArmadaKapal: true,
+      dokumenKapal: [
+        { id: "existing-one", source: "existing", fileId: "existing-one", fileName: "one.pdf" },
+        { id: "existing-two", source: "existing", fileId: "existing-two", fileName: "two.pdf" },
+      ],
+    }]);
+    const update = vi.spyOn(submissions, "update");
+    const { user, combobox } = await setup({
+      distributors: new MockDistributorRepository(),
+      submissions,
+    });
+    await selectDistributor(user, combobox, "ADE LESTARI SEJATI, PT");
+    await user.click(screen.getByRole("button", { name: "Hapus Kapal 1" }));
+    expect(screen.queryByText("one.pdf")).not.toBeInTheDocument();
+    expect(screen.getByText("two.pdf")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Simpan Data" }));
+    await user.click(await screen.findByRole("button", { name: "Ya, Simpan" }));
+    expect(await screen.findByRole("heading", { name: "Data berhasil disimpan" })).toBeVisible();
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dokumenKapal: [expect.objectContaining({ fileId: "existing-two", fileName: "two.pdf" })],
+      }),
+      expect.any(Object),
+    );
   });
 
   it("menampilkan success state hanya setelah final save selesai", async () => {
@@ -370,6 +394,16 @@ describe("PILOK Armada Kapal", () => {
     await user.click(await screen.findByRole("button", { name: "Ya, Simpan" }));
     await screen.findByRole("heading", { name: "Data berhasil disimpan" });
     expect(update).toHaveBeenCalledOnce();
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dokumenKapal: [expect.objectContaining({
+          source: "existing",
+          fileId: "existing-kapal-1",
+          fileName: "bukti-kepemilikan-kapal-ade.pdf",
+        })],
+      }),
+      expect.any(Object),
+    );
     expect(create).not.toHaveBeenCalled();
   });
 

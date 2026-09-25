@@ -115,16 +115,6 @@ export function DocumentList({
                     <p title={fileName}>{fileName}</p>
                     <span>{document.source === "existing" ? "Tersimpan" : "Siap disimpan"}</span>
                   </div>
-                  {document.source === "existing" && document.fileUrl ? (
-                    <a
-                      className="button-text view-file"
-                      href={document.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Lihat File
-                    </a>
-                  ) : null}
                   <label className="button-text replace-file" htmlFor={inputId}>Ganti Dokumen</label>
                 </div>
               ) : (

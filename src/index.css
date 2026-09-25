@@ -141,7 +141,6 @@
   .file-details p { @apply truncate text-sm font-semibold text-slate-800; }
   .file-details span { @apply text-xs text-slate-500; }
   .replace-file { @apply shrink-0 cursor-pointer; }
-  .view-file { @apply shrink-0; }
   .add-document { @apply mt-4; }
   .limit-note { @apply mt-2 text-xs text-slate-500; }
 
@@ -185,7 +184,6 @@
   .file-selected { @apply flex-wrap; }
   .file-details { flex-basis: calc(100% - 3.25rem); }
   .replace-file { @apply ml-[3.25rem]; }
-  .view-file { @apply ml-[3.25rem]; }
   .action-bar { @apply rounded-xl px-5; }
   .save-button { @apply w-full; }
 }
